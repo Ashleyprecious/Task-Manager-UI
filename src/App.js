@@ -244,13 +244,13 @@ function ProgressBar({pct,color}) {
 
 // ─── Profile Panel ────────────────────────────────────────────────────────────
 function ProfilePanel({user,setUser,token,onClose,showToast}) {
-  const [form,setForm]=useState({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
+  const [form,setForm]=useState({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
   const [saving,setSaving]=useState(false);
   const [tab,setTab]=useState("details"); // details | security
   const fileRef=useRef();
 
   // Sync if user prop changes
-  useEffect(()=>{setForm({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
+  useEffect(()=>{setForm({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
 
   const handleAvatar=e=>{
     const file=e.target.files?.[0]; if(!file) return;
