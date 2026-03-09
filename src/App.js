@@ -1,6 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import AdminPanel from "./AdminPanel";
-
 
 const API_BASE = "http://localhost:8177";
 
@@ -28,7 +26,6 @@ const globalStyles = `
   @keyframes bounceIn{0%{transform:scale(0.86);opacity:0}60%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
   @keyframes slideInPanel{from{transform:translateX(100%);opacity:.7}to{transform:translateX(0);opacity:1}}
   @keyframes slideInRight{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
-  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
   .card-hover{transition:transform var(--trans),box-shadow var(--trans),border-color var(--trans);}
   .card-hover:hover{transform:translateY(-2px);box-shadow:0 6px 24px var(--shadow);border-color:var(--mist2)!important;}
 `;
@@ -49,6 +46,7 @@ const store = {
   del: k => localStorage.removeItem(k),
 };
 
+// Extract user from the exact API shape: { result_code, message, user: { ...fields, token } }
 function extractUser(data) {
   const u = data?.user || data?.data?.user || data?.data || data;
   return {
@@ -59,7 +57,6 @@ function extractUser(data) {
     phone_number: u.phone_number || u.phone     || "",
     createdAt:    u.createdAt    || u.created_at|| "",
     avatar:       u.avatar       || u.profile_picture || null,
-    user_type:    u.user_type    || u.userType  || "user",
   };
 }
 
@@ -117,12 +114,6 @@ function Icon({name,size=16,color="currentColor",strokeWidth=1.6}) {
     "shield":      <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
     "camera":      <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
     "save":        <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
-    "lock":        <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-    "unlock":      <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></>,
-    "alert-triangle":<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
-    "image":       <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
-    "refresh":     <><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
-    "upload":      <><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
@@ -154,56 +145,28 @@ function Toast({message,type="info",onClose}) {
 const inputStyle={width:"100%",padding:"11px 14px",borderRadius:"var(--radius)",border:"1px solid var(--mist2)",background:"var(--cream)",fontSize:13,color:"var(--ink)",outline:"none",fontFamily:"var(--font-body)",transition:"border-color 0.15s,box-shadow 0.15s"};
 const labelStyle={display:"block",fontSize:11,fontWeight:600,marginBottom:6,color:"#888",letterSpacing:"0.07em",textTransform:"uppercase"};
 
-function Field({label,type="text",value,onChange,placeholder,required,rightEl,readOnly,style:extra,error}) {
+function Field({label,type="text",value,onChange,placeholder,required,rightEl,readOnly,style:extra}) {
   const [focused,setFocused]=useState(false);
   return (
     <div style={{marginBottom:14}}>
       {label&&<label style={labelStyle}>{label}</label>}
       <div style={{position:"relative"}}>
         <input type={type} value={value||""} onChange={onChange} placeholder={placeholder} required={required} readOnly={readOnly}
-          style={{...inputStyle,...(extra||{}),paddingRight:rightEl?42:14,borderColor:error?"#dc2626":focused?"var(--rust)":"var(--mist2)",boxShadow:error?"0 0 0 3px rgba(220,38,38,0.08)":focused?"0 0 0 3px rgba(201,70,10,0.08)":"none",background:readOnly?"var(--mist)":undefined,cursor:readOnly?"default":undefined}}
+          style={{...inputStyle,...(extra||{}),paddingRight:rightEl?42:14,borderColor:focused?"var(--rust)":"var(--mist2)",boxShadow:focused?"0 0 0 3px rgba(201,70,10,0.08)":"none",background:readOnly?"var(--mist)":undefined,cursor:readOnly?"default":undefined}}
           onFocus={()=>!readOnly&&setFocused(true)} onBlur={()=>setFocused(false)}/>
         {rightEl&&<div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)"}}>{rightEl}</div>}
       </div>
-      {error&&<div style={{fontSize:11,color:"#dc2626",marginTop:4,fontWeight:500}}>{error}</div>}
     </div>
   );
 }
 
-function PrimaryBtn({children,loading,type="button",onClick,fullWidth=true,color,danger}) {
-  const bg=danger?"#dc2626":color||"var(--ink)";
-  const hoverBg=danger?"#b91c1c":color?"#a33508":"var(--rust)";
+function PrimaryBtn({children,loading,type="button",onClick,fullWidth=true,color}) {
+  const bg=color||"var(--ink)";
   return (
     <button type={type} onClick={onClick} disabled={loading} style={{width:fullWidth?"100%":"auto",padding:"12px 24px",borderRadius:"var(--radius)",background:loading?"#ccc":bg,color:"#fff",fontSize:14,fontWeight:700,fontFamily:"var(--font-body)",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"background var(--trans),transform var(--trans)"}}
-      onMouseEnter={e=>{if(!loading){e.currentTarget.style.background=hoverBg;e.currentTarget.style.transform="translateY(-1px)";}}}
+      onMouseEnter={e=>{if(!loading){e.currentTarget.style.background=color?"#a33508":"var(--rust)";e.currentTarget.style.transform="translateY(-1px)";}}}
       onMouseLeave={e=>{if(!loading){e.currentTarget.style.background=bg;e.currentTarget.style.transform="translateY(0)";}}}
     >{loading?<Spinner size={15} color="#fff"/>:children}</button>
-  );
-}
-
-// ─── Confirm Dialog ───────────────────────────────────────────────────────────
-function ConfirmDialog({title,message,confirmLabel="Confirm",danger=true,onConfirm,onCancel,loading,children}) {
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(10,10,15,0.55)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:24,animation:"fadeIn 0.15s ease"}} onClick={e=>e.target===e.currentTarget&&onCancel()}>
-      <div style={{background:"#fff",borderRadius:"var(--radius-xl)",width:"100%",maxWidth:420,border:"1px solid var(--mist)",boxShadow:"0 24px 64px rgba(0,0,0,0.2)",animation:"scaleIn 0.2s ease",overflow:"hidden"}}>
-        <div style={{padding:"24px 26px 20px",borderBottom:"1px solid var(--mist)",background:danger?"#fef2f2":"var(--cream)",display:"flex",gap:14,alignItems:"flex-start"}}>
-          <div style={{width:40,height:40,borderRadius:"var(--radius-lg)",background:danger?"rgba(220,38,38,0.1)":"rgba(201,70,10,0.08)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
-            <Icon name="alert-triangle" size={18} color={danger?"#dc2626":"var(--rust)"} strokeWidth={2}/>
-          </div>
-          <div>
-            <h3 style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:17,marginBottom:4}}>{title}</h3>
-            <p style={{fontSize:13,color:"#777",lineHeight:1.6}}>{message}</p>
-          </div>
-        </div>
-        {children&&<div style={{padding:"18px 26px 0"}}>{children}</div>}
-        <div style={{padding:"16px 26px 24px",display:"flex",gap:10}}>
-          <button onClick={onCancel} style={{flex:1,padding:"10px",borderRadius:"var(--radius-lg)",fontSize:13,fontWeight:500,color:"#777",border:"1px solid var(--mist2)",background:"transparent",transition:"border-color var(--trans)",fontFamily:"var(--font-body)"}} onMouseEnter={e=>e.currentTarget.style.borderColor="var(--ink)"} onMouseLeave={e=>e.currentTarget.style.borderColor="var(--mist2)"}>Cancel</button>
-          <button onClick={onConfirm} disabled={loading} style={{flex:2,padding:"10px",borderRadius:"var(--radius-lg)",fontSize:13,fontWeight:700,color:"#fff",background:loading?"#ccc":danger?"#dc2626":"var(--rust)",border:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"background var(--trans)",fontFamily:"var(--font-body)"}} onMouseEnter={e=>{if(!loading)e.currentTarget.style.background=danger?"#b91c1c":"var(--rust-light)";}} onMouseLeave={e=>{if(!loading)e.currentTarget.style.background=danger?"#dc2626":"var(--rust)";}}>
-            {loading?<Spinner size={14} color="#fff"/>:confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -279,176 +242,37 @@ function ProgressBar({pct,color}) {
   return <div style={{height:5,background:"var(--mist)",borderRadius:"99px",overflow:"hidden"}}><div style={{height:"100%",width:`${w}%`,background:color,borderRadius:"99px",transition:"width 0.8s cubic-bezier(.4,0,.2,1)"}}/></div>;
 }
 
-// ─── Photo Crop / Upload Modal ────────────────────────────────────────────────
-function PhotoUploadModal({onClose,onSave,showToast}) {
-  const fileRef = useRef();
-  const [preview, setPreview] = useState(null);
-  const [file, setFile] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const currentAv = localStorage.getItem("tm_avatar");
-
-  const handleFile = e => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 5*1024*1024) { showToast("Image must be under 5MB","error"); return; }
-    setFile(f);
-    const r = new FileReader();
-    r.onload = ev => setPreview(ev.target.result);
-    r.readAsDataURL(f);
-  };
-
-  const handleSave = () => {
-    if (!preview) { showToast("Please select a photo first","error"); return; }
-    setSaving(true);
-    setTimeout(() => {
-      localStorage.setItem("tm_avatar", preview);
-      showToast("Profile photo updated!","success");
-      setSaving(false);
-      onSave();
-    }, 600);
-  };
-
-  const handleRemove = () => {
-    localStorage.removeItem("tm_avatar");
-    showToast("Profile photo removed","info");
-    onSave();
-  };
-
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(10,10,15,0.55)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:24,animation:"fadeIn 0.15s ease"}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"#fff",borderRadius:"var(--radius-xl)",width:"100%",maxWidth:440,border:"1px solid var(--mist)",boxShadow:"0 24px 64px rgba(0,0,0,0.18)",animation:"scaleIn 0.2s ease",overflow:"hidden"}}>
-        <div style={{padding:"20px 24px 16px",borderBottom:"1px solid var(--mist)",background:"var(--cream)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div>
-            <h3 style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:17}}>Update Profile Photo</h3>
-            <p style={{fontSize:12,color:"#aaa",marginTop:2}}>Upload a new picture or remove the current one</p>
-          </div>
-          <button onClick={onClose} style={{width:30,height:30,borderRadius:"var(--radius)",display:"flex",alignItems:"center",justifyContent:"center",color:"#bbb",transition:"all var(--trans)"}} onMouseEnter={e=>{e.currentTarget.style.background="var(--mist)";e.currentTarget.style.color="var(--ink)";}} onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color="#bbb";}}><Icon name="x" size={16} color="currentColor" strokeWidth={2}/></button>
-        </div>
-        <div style={{padding:"28px 24px"}}>
-          {/* Preview */}
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}>
-            <div style={{width:110,height:110,borderRadius:"50%",overflow:"hidden",background:"linear-gradient(135deg,var(--rust),var(--rust-light))",display:"flex",alignItems:"center",justifyContent:"center",border:"3px solid var(--mist2)",boxShadow:"0 4px 20px var(--shadow)",marginBottom:12,position:"relative"}}>
-              {(preview||currentAv)
-                ? <img src={preview||currentAv} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                : <Icon name="user" size={40} color="rgba(255,255,255,0.6)" strokeWidth={1.5}/>
-              }
-            </div>
-            <div style={{fontSize:12,color:"#aaa"}}>
-              {preview ? "New photo preview" : currentAv ? "Current photo" : "No photo set"}
-            </div>
-          </div>
-
-          {/* Upload area */}
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:"none"}} onChange={handleFile}/>
-          <div onClick={()=>fileRef.current?.click()} style={{border:"2px dashed var(--mist2)",borderRadius:"var(--radius-lg)",padding:"24px",textAlign:"center",cursor:"pointer",transition:"all var(--trans)",marginBottom:16,background:preview?"rgba(201,70,10,0.02)":"transparent"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--rust)";e.currentTarget.style.background="rgba(201,70,10,0.03)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--mist2)";e.currentTarget.style.background=preview?"rgba(201,70,10,0.02)":"transparent";}}>
-            <Icon name="upload" size={22} color="var(--rust)" strokeWidth={1.8}/>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--ink)",marginTop:8,marginBottom:2}}>
-              {file ? file.name : "Click to choose a photo"}
-            </div>
-            <div style={{fontSize:11,color:"#aaa"}}>JPG, PNG, WebP or GIF · Max 5MB</div>
-          </div>
-
-          <div style={{display:"flex",gap:10}}>
-            {currentAv&&!preview&&(
-              <button onClick={handleRemove} style={{flex:1,padding:"10px",borderRadius:"var(--radius-lg)",fontSize:13,fontWeight:600,color:"#dc2626",border:"1px solid #fecaca",background:"#fef2f2",transition:"all var(--trans)",fontFamily:"var(--font-body)"}} onMouseEnter={e=>e.currentTarget.style.background="#fee2e2"} onMouseLeave={e=>e.currentTarget.style.background="#fef2f2"}>
-                Remove photo
-              </button>
-            )}
-            <button onClick={handleSave} disabled={!preview||saving} style={{flex:2,padding:"10px",borderRadius:"var(--radius-lg)",fontSize:13,fontWeight:700,color:"#fff",background:(!preview||saving)?"#ccc":"var(--rust)",border:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"background var(--trans)",fontFamily:"var(--font-body)"}} onMouseEnter={e=>{if(preview&&!saving)e.currentTarget.style.background="var(--rust-light)";}} onMouseLeave={e=>{if(preview&&!saving)e.currentTarget.style.background="var(--rust)";}}>
-              {saving?<Spinner size={14} color="#fff"/>:<><Icon name="save" size={13} color="#fff" strokeWidth={2}/> Save photo</>}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Profile Panel ────────────────────────────────────────────────────────────
-function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
-  const [form,setForm]=useState({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
+function ProfilePanel({user,setUser,token,onClose,showToast}) {
+  const [form,setForm]=useState({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
   const [saving,setSaving]=useState(false);
-  const [tab,setTab]=useState("details");
-  const [photoModal,setPhotoModal]=useState(false);
-  const [avatarVersion, setAvatarVersion] = useState(0); // force re-render on photo change
+  const [tab,setTab]=useState("details"); // details | security
+  const fileRef=useRef();
 
-  // Password change state
-  const [pwForm, setPwForm] = useState({current:"", newPw:"", confirm:""});
-  const [pwErrors, setPwErrors] = useState({});
-  const [showPw, setShowPw] = useState({current:false, newPw:false, confirm:false});
-  const [pwLoading, setPwLoading] = useState(false);
+  // Sync if user prop changes
+  useEffect(()=>{setForm({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
 
-  // Delete account state
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [deleteLoading, setDeleteLoading] = useState(false);
-
-  useEffect(()=>{setForm({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
+  const handleAvatar=e=>{
+    const file=e.target.files?.[0]; if(!file) return;
+    if(file.size>2*1024*1024){showToast("Image must be under 2MB","error");return;}
+    const r=new FileReader();
+    r.onload=ev=>{localStorage.setItem("tm_avatar",ev.target.result);showToast("Photo updated!","success");setUser({...user});};
+    r.readAsDataURL(file);
+  };
 
   const saveProfile=async e=>{
     e.preventDefault(); setSaving(true);
     try {
       await apiFetch("/api/users/update",{method:"POST",body:JSON.stringify(form)},token);
-      const updated={...user,...form,first_name:form.first_name,last_name:form.last_name,email:form.email,phone_number:form.phone_number};
-      store.set("tm_user",updated); setUser(updated);
-      showToast("Profile updated successfully!","success");
-    } catch {
       const updated={...user,...form};
       store.set("tm_user",updated); setUser(updated);
-      showToast("Profile saved locally","info");
-    } finally {setSaving(false);}
-  };
-
-  const validatePassword = () => {
-    const errors = {};
-    if (!pwForm.current) errors.current = "Current password is required";
-    if (!pwForm.newPw) errors.newPw = "New password is required";
-    else if (pwForm.newPw.length < 8) errors.newPw = "Must be at least 8 characters";
-    if (!pwForm.confirm) errors.confirm = "Please confirm your new password";
-    else if (pwForm.newPw !== pwForm.confirm) errors.confirm = "Passwords do not match";
-    if (pwForm.current === pwForm.newPw && pwForm.newPw) errors.newPw = "New password must differ from current";
-    return errors;
-  };
-
-  const handlePasswordChange = async e => {
-    e.preventDefault();
-    const errors = validatePassword();
-    if (Object.keys(errors).length) { setPwErrors(errors); return; }
-    setPwErrors({});
-    setPwLoading(true);
-    try {
-      await apiFetch("/api/users/change-password", {
-        method:"POST",
-        body:JSON.stringify({current_password:pwForm.current, new_password:pwForm.newPw})
-      }, token);
-      showToast("Password changed successfully!","success");
-      setPwForm({current:"",newPw:"",confirm:""});
-    } catch(err) {
-      showToast(err.message||"Failed to change password","error");
-    } finally {
-      setPwLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "DELETE") {
-      showToast('Please type "DELETE" to confirm','error');
-      return;
-    }
-    setDeleteLoading(true);
-    try {
-      await apiFetch("/api/users/delete", {method:"POST"}, token);
-      showToast("Account deleted","info");
-      onLogout();
+      showToast("Profile updated!","success");
     } catch {
-      // Still log out locally even if API fails
-      showToast("Account deleted","info");
-      onLogout();
-    } finally {
-      setDeleteLoading(false);
-    }
+      // persist locally anyway
+      const updated={...user,...form};
+      store.set("tm_user",updated); setUser(updated);
+      showToast("Saved locally","info");
+    } finally {setSaving(false);}
   };
 
   const formatDate=d=>{if(!d)return"—";try{return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});}catch{return d;}};
@@ -465,26 +289,10 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
     </div>
   );
 
-  const PwField = ({label, field, placeholder}) => (
-    <Field
-      label={label}
-      type={showPw[field]?"text":"password"}
-      value={pwForm[field]}
-      onChange={e=>setPwForm(p=>({...p,[field]:e.target.value}))}
-      placeholder={placeholder}
-      error={pwErrors[field]}
-      rightEl={
-        <button type="button" onClick={()=>setShowPw(p=>({...p,[field]:!p[field]}))} style={{color:"#aaa",display:"flex"}} onMouseEnter={e=>e.currentTarget.style.color="var(--ink)"} onMouseLeave={e=>e.currentTarget.style.color="#aaa"}>
-          <Icon name={showPw[field]?"eye-off":"eye"} size={15} color="currentColor" strokeWidth={1.8}/>
-        </button>
-      }
-    />
-  );
-
   return (
     <>
       <div style={{position:"fixed",inset:0,background:"rgba(10,10,15,0.3)",zIndex:300,animation:"fadeIn 0.18s ease"}} onClick={onClose}/>
-      <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(500px,95vw)",background:"var(--paper)",borderLeft:"1px solid var(--mist)",zIndex:301,display:"flex",flexDirection:"column",boxShadow:"-16px 0 56px rgba(10,10,15,0.16)",animation:"slideInPanel 0.28s cubic-bezier(0.4,0,0.2,1)"}}>
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(480px,95vw)",background:"var(--paper)",borderLeft:"1px solid var(--mist)",zIndex:301,display:"flex",flexDirection:"column",boxShadow:"-16px 0 56px rgba(10,10,15,0.16)",animation:"slideInPanel 0.28s cubic-bezier(0.4,0,0.2,1)"}}>
 
         {/* Header */}
         <div style={{background:"#fff",borderBottom:"1px solid var(--mist)",padding:"18px 24px",display:"flex",alignItems:"center",gap:14,flexShrink:0}}>
@@ -493,37 +301,33 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
           </button>
           <div style={{flex:1}}>
             <h2 style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:18,letterSpacing:"-0.01em"}}>My Profile</h2>
-            <p style={{fontSize:12,color:"#aaa",marginTop:1}}>Manage your account and preferences</p>
+            <p style={{fontSize:12,color:"#aaa",marginTop:1}}>View and update your personal details</p>
           </div>
         </div>
 
         {/* Avatar hero */}
         <div style={{background:"linear-gradient(135deg,var(--ink) 0%,#2a2a3a 100%)",padding:"32px 24px 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:14,flexShrink:0,position:"relative",overflow:"hidden"}}>
+          {/* subtle pattern */}
           <div style={{position:"absolute",inset:0,opacity:0.05,backgroundImage:"radial-gradient(circle,#fff 1px,transparent 1px)",backgroundSize:"20px 20px",pointerEvents:"none"}}/>
-          <Avatar key={avatarVersion} user={user} size={88} onClick={()=>setPhotoModal(true)} showCamera/>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatar}/>
+          <Avatar user={user} size={88} onClick={()=>fileRef.current?.click()} showCamera/>
           <div style={{textAlign:"center",position:"relative",zIndex:1}}>
             <div style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:22,color:"#fff",marginBottom:2}}>
               {user.first_name} {user.last_name}
             </div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.55)",marginBottom:10}}>{user.email}</div>
-            <button onClick={()=>setPhotoModal(true)} style={{fontSize:11,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",padding:"4px 14px",borderRadius:"99px",transition:"all var(--trans)",display:"inline-flex",alignItems:"center",gap:6}}
+            <button onClick={()=>fileRef.current?.click()} style={{fontSize:11,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",padding:"4px 12px",borderRadius:"99px",transition:"all var(--trans)"}}
               onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.15)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)";}}>
-              <Icon name="camera" size={11} color="rgba(255,255,255,0.6)" strokeWidth={2}/>
               Change photo
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{display:"flex",borderBottom:"1px solid var(--mist)",background:"#fff",flexShrink:0,overflowX:"auto"}}>
-          {[
-            {id:"details",label:"Details",icon:"user"},
-            {id:"edit",label:"Edit",icon:"edit"},
-            {id:"security",label:"Password",icon:"lock"},
-            {id:"danger",label:"Account",icon:"shield"},
-          ].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"12px 6px",fontSize:11,fontWeight:tab===t.id?700:500,color:tab===t.id?(t.id==="danger"?"#dc2626":"var(--rust)"):"#888",borderBottom:`2px solid ${tab===t.id?(t.id==="danger"?"#dc2626":"var(--rust)"):"transparent"}`,transition:"all var(--trans)",display:"flex",alignItems:"center",justifyContent:"center",gap:5,whiteSpace:"nowrap"}}>
-              <Icon name={t.icon} size={12} color="currentColor" strokeWidth={tab===t.id?2.2:1.8}/>{t.label}
+        <div style={{display:"flex",borderBottom:"1px solid var(--mist)",background:"#fff",flexShrink:0}}>
+          {[{id:"details",label:"Details",icon:"user"},{id:"edit",label:"Edit Profile",icon:"edit"},{id:"security",label:"Security",icon:"shield"}].map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"12px 8px",fontSize:12,fontWeight:tab===t.id?700:500,color:tab===t.id?"var(--rust)":"#888",borderBottom:`2px solid ${tab===t.id?"var(--rust)":"transparent"}`,transition:"all var(--trans)",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              <Icon name={t.icon} size={13} color="currentColor" strokeWidth={tab===t.id?2.2:1.8}/>{t.label}
             </button>
           ))}
         </div>
@@ -552,8 +356,8 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
                 </div>
               </div>
               <div style={{background:"rgba(201,70,10,0.04)",border:"1px solid rgba(201,70,10,0.12)",borderRadius:"var(--radius-lg)",padding:"12px 16px",fontSize:12,color:"#b45309",display:"flex",alignItems:"flex-start",gap:8}}>
-                <Icon name="star" size={13} color="var(--rust)" strokeWidth={2}/>
-                <span>Click <strong>Edit</strong> to update your info, <strong>Password</strong> to change your password, or <strong>Account</strong> to manage your account.</span>
+                <Icon name="star" size={13} color="var(--rust)" strokeWidth={2}/> 
+                <span>Click <strong>Edit Profile</strong> above to update your information or <strong>Change photo</strong> to upload a new picture.</span>
               </div>
             </div>
           )}
@@ -565,32 +369,16 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
                 <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"18px 18px 4px",marginBottom:14}}>
                   <div style={{fontFamily:"var(--font-display)",fontWeight:600,fontSize:14,marginBottom:16,paddingBottom:10,borderBottom:"1px solid var(--mist)"}}>Personal Information</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                    <Field label="First name" value={form.first_name} onChange={e=>setForm(p=>({...p,first_name:e.target.value}))} placeholder="First name" required/>
-                    <Field label="Last name"  value={form.last_name}  onChange={e=>setForm(p=>({...p,last_name:e.target.value}))}  placeholder="Last name" required/>
+                    <Field label="First name" value={form.first_name} onChange={e=>setForm(p=>({...p,first_name:e.target.value}))} placeholder="First name"/>
+                    <Field label="Last name"  value={form.last_name}  onChange={e=>setForm(p=>({...p,last_name:e.target.value}))}  placeholder="Last name"/>
                   </div>
-                  <Field label="Email address" type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder="you@example.com" required/>
+                  <Field label="Email address" type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder="you@example.com"/>
                   <Field label="Phone number" value={form.phone_number} onChange={e=>setForm(p=>({...p,phone_number:e.target.value}))} placeholder="07XXXXXXXX"/>
                 </div>
                 <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"18px 18px 14px",marginBottom:16}}>
                   <div style={{fontFamily:"var(--font-display)",fontWeight:600,fontSize:14,marginBottom:16,paddingBottom:10,borderBottom:"1px solid var(--mist)"}}>Account Info</div>
                   <Field label="User ID" value={user.user_id} readOnly/>
                   <Field label="Account created" value={formatDate(user.createdAt)} readOnly/>
-                </div>
-                {/* Photo section in edit tab */}
-                <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"18px 18px",marginBottom:16}}>
-                  <div style={{fontFamily:"var(--font-display)",fontWeight:600,fontSize:14,marginBottom:14,paddingBottom:10,borderBottom:"1px solid var(--mist)"}}>Profile Photo</div>
-                  <div style={{display:"flex",alignItems:"center",gap:16}}>
-                    <Avatar key={avatarVersion} user={user} size={60}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:500,color:"var(--ink)",marginBottom:6}}>
-                        {localStorage.getItem("tm_avatar") ? "Photo uploaded" : "No photo set"}
-                      </div>
-                      <button type="button" onClick={()=>setPhotoModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,fontWeight:600,color:"var(--rust)",background:"rgba(201,70,10,0.06)",border:"1px solid rgba(201,70,10,0.2)",padding:"6px 14px",borderRadius:"var(--radius-lg)",transition:"all var(--trans)"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(201,70,10,0.12)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(201,70,10,0.06)"}>
-                        <Icon name="camera" size={13} color="var(--rust)" strokeWidth={2}/>
-                        {localStorage.getItem("tm_avatar") ? "Change photo" : "Upload photo"}
-                      </button>
-                    </div>
-                  </div>
                 </div>
                 <PrimaryBtn type="submit" loading={saving} color="var(--rust)">
                   <Icon name="save" size={14} color="#fff" strokeWidth={2}/> {saving?"Saving…":"Save changes"}
@@ -599,144 +387,45 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
             </div>
           )}
 
-          {/* ── Password tab ── */}
+          {/* ── Security tab ── */}
           {tab==="security" && (
             <div style={{animation:"slideInRight 0.22s ease"}}>
-              <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"18px 18px 14px",marginBottom:14}}>
-                <div style={{fontFamily:"var(--font-display)",fontWeight:600,fontSize:14,marginBottom:4,paddingBottom:10,borderBottom:"1px solid var(--mist)",display:"flex",alignItems:"center",gap:8}}>
-                  <Icon name="lock" size={14} color="var(--rust)" strokeWidth={2}/>
-                  Change Password
-                </div>
-                <div style={{fontSize:12,color:"#aaa",marginBottom:16,marginTop:10}}>Choose a strong password. It should be at least 8 characters and different from your current one.</div>
-                <form onSubmit={handlePasswordChange}>
-                  <PwField label="Current password" field="current" placeholder="Enter current password"/>
-                  <div style={{height:1,background:"var(--mist)",margin:"4px 0 14px"}}/>
-                  <PwField label="New password" field="newPw" placeholder="At least 8 characters"/>
-                  <PwField label="Confirm new password" field="confirm" placeholder="Repeat new password"/>
-
-                  {/* Strength hint */}
-                  {pwForm.newPw && (
-                    <div style={{marginBottom:14}}>
-                      <div style={{fontSize:10,fontWeight:600,color:"#aaa",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:6}}>Strength</div>
-                      <div style={{display:"flex",gap:4,marginBottom:4}}>
-                        {[1,2,3,4].map(i=>{
-                          const len=pwForm.newPw.length;
-                          const hasUpper=/[A-Z]/.test(pwForm.newPw);
-                          const hasNum=/\d/.test(pwForm.newPw);
-                          const hasSpecial=/[^a-zA-Z0-9]/.test(pwForm.newPw);
-                          const score=[len>=8,hasUpper,hasNum,hasSpecial].filter(Boolean).length;
-                          const colors=["#ef4444","#f59e0b","#3b82f6","#22c55e"];
-                          return <div key={i} style={{flex:1,height:4,borderRadius:"99px",background:i<=score?colors[score-1]:"var(--mist)",transition:"background 0.3s"}}/>;
-                        })}
+              <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"4px 16px 0",marginBottom:16}}>
+                <div style={{padding:"14px 0",borderBottom:"1px solid var(--mist)"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:34,height:34,borderRadius:"var(--radius)",background:"rgba(201,70,10,0.07)",display:"flex",alignItems:"center",justifyContent:"center"}}><Icon name="key" size={15} color="var(--rust)" strokeWidth={1.8}/></div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,marginBottom:1}}>Password</div>
+                        <div style={{fontSize:11,color:"#aaa"}}>Last updated recently</div>
                       </div>
-                      <div style={{fontSize:11,color:"#aaa"}}>{
-                        pwForm.newPw.length<8?"Too short — needs 8+ characters":
-                        [/[A-Z]/,/\d/,/[^a-zA-Z0-9]/].filter(r=>r.test(pwForm.newPw)).length===0?"Weak — add uppercase, numbers or symbols":
-                        [/[A-Z]/,/\d/,/[^a-zA-Z0-9]/].filter(r=>r.test(pwForm.newPw)).length===1?"Fair":
-                        [/[A-Z]/,/\d/,/[^a-zA-Z0-9]/].filter(r=>r.test(pwForm.newPw)).length===2?"Good":"Strong 🔒"
-                      }</div>
                     </div>
-                  )}
-
-                  <PrimaryBtn type="submit" loading={pwLoading} color="var(--rust)">
-                    <Icon name="lock" size={14} color="#fff" strokeWidth={2}/> {pwLoading?"Updating…":"Update password"}
-                  </PrimaryBtn>
-                </form>
+                    <button style={{fontSize:12,fontWeight:600,color:"var(--rust)",background:"rgba(201,70,10,0.06)",border:"1px solid rgba(201,70,10,0.15)",padding:"5px 12px",borderRadius:"99px",transition:"all var(--trans)"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="rgba(201,70,10,0.12)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(201,70,10,0.06)"}>
+                      Change
+                    </button>
+                  </div>
+                </div>
+                <div style={{padding:"14px 0"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:34,height:34,borderRadius:"var(--radius)",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center"}}><Icon name="shield" size={15} color="#16a34a" strokeWidth={1.8}/></div>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,marginBottom:1}}>Account Security</div>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,color:"#15803d",background:"#f0fdf4",padding:"2px 8px",borderRadius:"99px",border:"1px solid #bbf7d0"}}>
+                        <span style={{width:5,height:5,borderRadius:"50%",background:"#22c55e",animation:"pulse 2s infinite",display:"inline-block"}}/>Protected
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:"var(--radius-lg)",padding:"12px 16px",fontSize:12,color:"#dc2626",display:"flex",gap:8,alignItems:"flex-start"}}>
+              <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:"var(--radius-lg)",padding:"12px 16px",fontSize:12,color:"#dc2626",display:"flex",gap:8}}>
                 <Icon name="x-circle" size={13} color="#dc2626" strokeWidth={2}/>
                 <span>Never share your password. Taskr will never ask for it via email or chat.</span>
               </div>
             </div>
           )}
-
-          {/* ── Danger Zone tab ── */}
-          {tab==="danger" && (
-            <div style={{animation:"slideInRight 0.22s ease"}}>
-              {/* Account info summary */}
-              <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",padding:"18px",marginBottom:16}}>
-                <div style={{fontFamily:"var(--font-display)",fontWeight:600,fontSize:14,marginBottom:14,paddingBottom:10,borderBottom:"1px solid var(--mist)",display:"flex",alignItems:"center",gap:8}}>
-                  <Icon name="shield" size={14} color="#15803d" strokeWidth={2}/>
-                  Account Overview
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
-                    <span style={{color:"#777"}}>Account status</span>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,color:"#15803d",background:"#f0fdf4",padding:"2px 10px",borderRadius:"99px",border:"1px solid #bbf7d0"}}>
-                      <span style={{width:5,height:5,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite"}}/>Active
-                    </span>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
-                    <span style={{color:"#777"}}>Registered email</span>
-                    <span style={{fontWeight:500,color:"var(--ink)"}}>{user.email||"—"}</span>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
-                    <span style={{color:"#777"}}>Member since</span>
-                    <span style={{fontWeight:500,color:"var(--ink)"}}>{formatDate(user.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Delete account */}
-              <div style={{background:"#fff",borderRadius:"var(--radius-lg)",border:"1.5px solid #fecaca",padding:"18px",marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
-                  <div style={{width:36,height:36,borderRadius:"var(--radius)",background:"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <Icon name="trash" size={16} color="#dc2626" strokeWidth={2}/>
-                  </div>
-                  <div>
-                    <div style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:15,color:"#dc2626",marginBottom:4}}>Delete Account</div>
-                    <div style={{fontSize:12,color:"#777",lineHeight:1.65}}>
-                      Permanently delete your account and all associated data. This action <strong>cannot be undone</strong> and you will lose all your tasks.
-                    </div>
-                  </div>
-                </div>
-                <button onClick={()=>setDeleteConfirm(true)} style={{width:"100%",padding:"10px 16px",borderRadius:"var(--radius-lg)",fontSize:13,fontWeight:700,color:"#dc2626",background:"#fef2f2",border:"1.5px solid #fecaca",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all var(--trans)",fontFamily:"var(--font-body)"}} onMouseEnter={e=>{e.currentTarget.style.background="#fee2e2";e.currentTarget.style.borderColor="#fca5a5";}} onMouseLeave={e=>{e.currentTarget.style.background="#fef2f2";e.currentTarget.style.borderColor="#fecaca";}}>
-                  <Icon name="trash" size={14} color="#dc2626" strokeWidth={2}/> Delete my account
-                </button>
-              </div>
-
-              <div style={{background:"rgba(201,70,10,0.04)",border:"1px solid rgba(201,70,10,0.12)",borderRadius:"var(--radius-lg)",padding:"12px 16px",fontSize:12,color:"#b45309",display:"flex",gap:8,alignItems:"flex-start"}}>
-                <Icon name="alert-triangle" size={13} color="var(--rust)" strokeWidth={2}/>
-                <span>Need help instead? Contact support before deleting your account — we may be able to resolve your issue.</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Photo upload modal */}
-      {photoModal && (
-        <PhotoUploadModal
-          onClose={()=>setPhotoModal(false)}
-          showToast={showToast}
-          onSave={()=>{setPhotoModal(false);setAvatarVersion(v=>v+1);setUser({...user});}}
-        />
-      )}
-
-      {/* Delete confirmation dialog */}
-      {deleteConfirm && (
-        <ConfirmDialog
-          title="Delete your account?"
-          message={`This will permanently delete your account (${user.email}) and all your tasks. This cannot be reversed.`}
-          confirmLabel={deleteConfirmText==="DELETE"?<><Icon name="trash" size={13} color="#fff" strokeWidth={2}/> Yes, delete forever</>:"Type DELETE to confirm"}
-          danger
-          loading={deleteLoading}
-          onConfirm={handleDeleteAccount}
-          onCancel={()=>{setDeleteConfirm(false);setDeleteConfirmText("");}}
-        >
-          <div style={{marginBottom:4}}>
-            <label style={{...labelStyle,color:"#dc2626"}}>Type <strong>DELETE</strong> to confirm</label>
-            <input
-              value={deleteConfirmText}
-              onChange={e=>setDeleteConfirmText(e.target.value)}
-              placeholder="DELETE"
-              style={{...inputStyle,borderColor:deleteConfirmText==="DELETE"?"#dc2626":"var(--mist2)",fontWeight:700,letterSpacing:"0.05em"}}
-              onFocus={e=>{e.target.style.borderColor="#dc2626";e.target.style.boxShadow="0 0 0 3px rgba(220,38,38,0.08)";}}
-              onBlur={e=>{e.target.style.borderColor=deleteConfirmText==="DELETE"?"#dc2626":"var(--mist2)";e.target.style.boxShadow="none";}}
-            />
-          </div>
-        </ConfirmDialog>
-      )}
     </>
   );
 }
@@ -769,13 +458,16 @@ function AuthForm({mode,onSuccess,onSwitch,onBack,showToast}) {
       const path=isLogin?"/api/users/login":"/api/users/register";
       const body=isLogin?{email:form.email,password:form.password}:{first_name:form.first_name,last_name:form.last_name,email:form.email,password:form.password,phone_number:form.phone_number};
       const data=await apiFetch(path,{method:"POST",body:JSON.stringify(body)});
+      // ── Extract token — supports { user: { token } } shape ──
       const token=data.user?.token||data.token||data.access_token||data.data?.token;
       if (isLogin&&token) {
+        // ── Save user details from login response ──
         const u=extractUser(data);
         store.set("tm_user",u);
-        showToast(`Welcome back, ${u.first_name}!`,"success");
+        showToast(`Hi, Welcome ${u.first_name}!`,"success");
         onSuccess(token,u);
       } else if (!isLogin) {
+        // Pre-fill profile from registration fields
         store.set("tm_user",{first_name:form.first_name,last_name:form.last_name,email:form.email,phone_number:form.phone_number,user_id:"",createdAt:""});
         showToast("Account created! Please sign in.","success"); onSwitch();
       } else throw new Error("No token received");
@@ -913,6 +605,7 @@ function Dashboard({token,onLogout,showToast,initialUser}) {
   const [search,setSearch]=useState("");
   const [profileOpen,setProfileOpen]=useState(false);
 
+  // Sync user from login response on first mount
   useEffect(()=>{if(initialUser&&initialUser.first_name){setUser(initialUser);}},[]);
 
   const fetchTasks=async()=>{
@@ -942,6 +635,7 @@ function Dashboard({token,onLogout,showToast,initialUser}) {
           <span style={{fontFamily:"var(--font-display)",fontWeight:700,fontSize:17}}>Taskr</span>
         </div>
 
+        {/* ── User chip — clickable ── */}
         <button onClick={()=>setProfileOpen(true)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"10px 10px",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",background:"var(--cream)",marginBottom:24,transition:"all var(--trans)",textAlign:"left"}}
           onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--rust)";e.currentTarget.style.background="#fff";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--mist)";e.currentTarget.style.background="var(--cream)";}}>
@@ -993,6 +687,7 @@ function Dashboard({token,onLogout,showToast,initialUser}) {
             <p style={{fontSize:13,color:"#aaa"}}>{new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
+            {/* Profile button in header */}
             <button onClick={()=>setProfileOpen(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",borderRadius:"var(--radius-lg)",border:"1px solid var(--mist)",background:"#fff",fontSize:13,fontWeight:500,color:"var(--ink)",transition:"all var(--trans)"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--rust)";e.currentTarget.style.color="var(--rust)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--mist)";e.currentTarget.style.color="var(--ink)";}}>
               <Avatar user={user} size={22}/> {user.first_name||"Profile"}
             </button>
@@ -1107,16 +802,7 @@ function Dashboard({token,onLogout,showToast,initialUser}) {
       )}
 
       {/* Profile panel */}
-      {profileOpen&&(
-        <ProfilePanel
-          user={user}
-          setUser={setUser}
-          token={token}
-          onClose={()=>setProfileOpen(false)}
-          showToast={showToast}
-          onLogout={()=>{setProfileOpen(false);onLogout();}}
-        />
-      )}
+      {profileOpen&&<ProfilePanel user={user} setUser={setUser} token={token} onClose={()=>setProfileOpen(false)} showToast={showToast}/>}
 
       {/* Task modal */}
       {modal!==null&&<TaskModal task={modal?.id?modal:null} token={token} showToast={showToast} onClose={()=>setModal(null)} onSave={()=>{setModal(null);fetchTasks();}}/>}
@@ -1180,29 +866,14 @@ export default function App() {
 
   useEffect(()=>{
     if(token){
+      // Restore persisted user on refresh
       const saved=store.get("tm_user");
-      if(saved){
-        setLoginUser(saved);
-        if(saved.user_type==="admin"){
-          setView("admin");       // ← redirect admin to panel
-        } else {
-          setView("dashboard");
-        }
-      } else {
-        setView("dashboard");
-      }
+      if(saved)setLoginUser(saved);
+      setView("dashboard");
     } else setView("landing");
   },[token]);
 
-  const handleLoginSuccess=(t,u)=>{
-    setToken(t);
-    setLoginUser(u);
-    if(u.user_type==="admin"){
-      setView("admin");           // ← redirect admin after login
-    } else {
-      setView("dashboard");
-    }
-  };
+  const handleLoginSuccess=(t,u)=>{setToken(t);setLoginUser(u);setView("dashboard");};
 
   return (
     <>
@@ -1212,13 +883,6 @@ export default function App() {
       {view==="login"    &&<AuthForm mode="login"    onSuccess={handleLoginSuccess} onSwitch={()=>setView("register")} onBack={()=>setView("landing")} showToast={showToast}/>}
       {view==="register" &&<AuthForm mode="register" onSuccess={()=>setView("login")}  onSwitch={()=>setView("login")}     onBack={()=>setView("landing")} showToast={showToast}/>}
       {view==="dashboard"&&token&&<Dashboard token={token} onLogout={()=>{clearToken();setLoginUser(null);setView("landing");showToast("Signed out","info");}} showToast={showToast} initialUser={loginUser}/>}
-      {view==="admin"&&token&&loginUser?.user_type==="admin"&&(
-        <AdminPanel
-          token={token}
-          adminUser={loginUser}
-          onLogout={()=>{clearToken();setLoginUser(null);setView("landing");showToast("Signed out","info");}}
-        />
-      )}
     </>
   );
 }
