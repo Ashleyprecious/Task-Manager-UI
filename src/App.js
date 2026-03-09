@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import AdminPanel from "./AdminPanel";
+
 
 const API_BASE = "http://localhost:8177";
 
@@ -57,6 +59,7 @@ function extractUser(data) {
     phone_number: u.phone_number || u.phone     || "",
     createdAt:    u.createdAt    || u.created_at|| "",
     avatar:       u.avatar       || u.profile_picture || null,
+    user_type:    u.user_type    || u.userType  || "user",
   };
 }
 
@@ -365,7 +368,7 @@ function PhotoUploadModal({onClose,onSave,showToast}) {
 
 // ─── Profile Panel ────────────────────────────────────────────────────────────
 function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
-  const [form,setForm]=useState({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
+  const [form,setForm]=useState({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});
   const [saving,setSaving]=useState(false);
   const [tab,setTab]=useState("details");
   const [photoModal,setPhotoModal]=useState(false);
@@ -382,7 +385,7 @@ function ProfilePanel({user,setUser,token,onClose,showToast,onLogout}) {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(()=>{setForm({id:user.user_id||"",first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
+  useEffect(()=>{setForm({first_name:user.first_name||"",last_name:user.last_name||"",email:user.email||"",phone_number:user.phone_number||""});},[user]);
 
   const saveProfile=async e=>{
     e.preventDefault(); setSaving(true);
@@ -1178,12 +1181,28 @@ export default function App() {
   useEffect(()=>{
     if(token){
       const saved=store.get("tm_user");
-      if(saved)setLoginUser(saved);
-      setView("dashboard");
+      if(saved){
+        setLoginUser(saved);
+        if(saved.user_type==="admin"){
+          setView("admin");       // ← redirect admin to panel
+        } else {
+          setView("dashboard");
+        }
+      } else {
+        setView("dashboard");
+      }
     } else setView("landing");
   },[token]);
 
-  const handleLoginSuccess=(t,u)=>{setToken(t);setLoginUser(u);setView("dashboard");};
+  const handleLoginSuccess=(t,u)=>{
+    setToken(t);
+    setLoginUser(u);
+    if(u.user_type==="admin"){
+      setView("admin");           // ← redirect admin after login
+    } else {
+      setView("dashboard");
+    }
+  };
 
   return (
     <>
@@ -1193,6 +1212,13 @@ export default function App() {
       {view==="login"    &&<AuthForm mode="login"    onSuccess={handleLoginSuccess} onSwitch={()=>setView("register")} onBack={()=>setView("landing")} showToast={showToast}/>}
       {view==="register" &&<AuthForm mode="register" onSuccess={()=>setView("login")}  onSwitch={()=>setView("login")}     onBack={()=>setView("landing")} showToast={showToast}/>}
       {view==="dashboard"&&token&&<Dashboard token={token} onLogout={()=>{clearToken();setLoginUser(null);setView("landing");showToast("Signed out","info");}} showToast={showToast} initialUser={loginUser}/>}
+      {view==="admin"&&token&&loginUser?.user_type==="admin"&&(
+        <AdminPanel
+          token={token}
+          adminUser={loginUser}
+          onLogout={()=>{clearToken();setLoginUser(null);setView("landing");showToast("Signed out","info");}}
+        />
+      )}
     </>
   );
 }
